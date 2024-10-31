@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador PID Avanzado</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --text-primary: #ffffff;
+            --text-secondary: #b3b3b3;
+            --accent: #4CAF50;
+            --accent-hover: #45a049;
+            --error: #ff4444;
+            --success: #00C851;
+            --warning: #ffbb33;
+            --card-bg: #333333;
+            --border-color: #404040;
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --card-bg: #ffffff;
+            --border-color: #e0e0e0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background-color: var(--bg-secondary);
+            margin-bottom: 2rem;
+            border-radius: 10px;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 1.5rem;
+            padding: 0.5rem;
+        }
+
+        .info-button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 1rem;
+        }
+
+        .info-button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .controls-card {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            gap: 1rem;
+        }
+
+        .control-group label {
+            min-width: 120px;
+            color: var(--text-secondary);
+        }
+
+        .slider-container {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        input[type="range"] {
+            flex-grow: 1;
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .value-display {
+            min-width: 60px;
+            text-align: center;
+            padding: 0.25rem 0.5rem;
+            background-color: var(--bg-secondary);
+            border-radius: 4px;
+            color: var(--text-secondary);
+        }
+
+        .chart-container {
+            background-color: var(--card-bg);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-top: 2rem;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: relative;
+            background-color: var(--card-bg);
+            margin: 5% auto;
+            padding: 2rem;
+            width: 80%;
+            max-width: 700px;
+            border-radius: 10px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .close {
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            margin-left: 0.5rem;
+        }
+
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 200px;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            text-align: center;
+            border-radius: 6px;
+            padding: 0.5rem;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-card {
+            background-color: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Simulador de Control PID</h1>
+            <div>
+                <button class="theme-toggle" id="themeToggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button class="info-button" onclick="openModal()">
+                    <i class="fas fa-info-circle"></i> Guía
+                </button>
+            </div>
+        </header>
+
+        <div class="controls-card">
+            <div class="control-group">
+                <label for="kp">Proporcional (Kp)</label>
+                <div class="slider-container">
+                    <input type="range" id="kp" min="0" max="10" step="0.1" value="1">
+                    <span class="value-display" id="kp-value">1.0</span>
+                </div>
+                <div class="tooltip">
+                    <i class="fas fa-question-circle"></i>
+                    <span class="tooltip-text">Controla la respuesta proporcional al error actual</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="ki">Integral (Ki)</label>
+                <div class="slider-container">
+                    <input type="range" id="ki" min="0" max="10" step="0.1" value="0.5">
+                    <span class="value-display" id="ki-value">0.5</span>
+                </div>
+                <div class="tooltip">
+                    <i class="fas fa-question-circle"></i>
+                    <span class="tooltip-text">Controla la respuesta basada en la suma de errores pasados</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="kd">Derivativo (Kd)</label>
+                <div class="slider-container">
+                    <input type="range" id="kd" min="0" max="10" step="0.1" value="0.1">
+                    <span class="value-display" id="kd-value">0.1</span>
+                </div>
+                <div class="tooltip">
+                    <i class="fas fa-question-circle"></i>
+                    <span class="tooltip-text">Controla la respuesta basada en la tasa de cambio del error</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Tiempo de Estabilización</h3>
+                <div class="stat-value" id="settlingTime">0.00s</div>
+            </div>
+            <div class="stat-card">
+                <h3>Sobreoscilación</h3>
+                <div class="stat-value" id="overshoot">0.00%</div>
+            </div>
+            <div class="stat-card">
+                <h3>Error en Estado Estable</h3>
+                <div class="stat-value" id="steadyStateError">0.00%</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="pidChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>Guía del Simulador PID</h2>
+            <div style="margin-top: 1rem;">
+                <h3>¿Qué es un controlador PID?</h3>
+                <p>Un controlador PID (Proporcional, Integral, Derivativo) es un mecanismo de control por realimentación ampliamente usado en sistemas de control industrial. Este simulador te permite experimentar con los tres componentes principales:</p>
+                
+                <h4>Componentes:</h4>
+                <ul>
+                    <li><strong>Proporcional (Kp):</strong> Produce una salida proporcional al error actual. Un valor más alto significa una respuesta más agresiva.</li>
+                    <li><strong>Integral (Ki):</strong> Suma el error a lo largo del tiempo. Ayuda a eliminar el error en estado estacionario.</li>
+                    <li><strong>Derivativo (Kd):</strong> Responde a la tasa de cambio del error. Ayuda a reducir el sobreimpulso y mejorar la estabilidad.</li>
+                </ul>
+
+                <h4>Métricas de Rendimiento:</h4>
+                <ul>
+                    <li><strong>Tiempo de Estabilización:</strong> Tiempo que tarda el sistema en alcanzar y mantener un valor cercano al objetivo.</li>
+                    <li><strong>Sobreoscilación:</strong> Porcentaje que la respuesta sobrepasa el valor objetivo.</li>
+                    <li><strong>Error en Estado Estable:</strong> Diferencia entre el valor final y el objetivo.</li>
+                </ul>
+
+                <h4>Consejos de Ajuste:</h4>
+                <ol>
+                    <li>Comienza con solo el control proporcional (Ki = Kd = 0)</li>
+                    <li>Aumenta Ki gradualmente para eliminar el error en estado estable</li>
+                    <li>Añade Kd para reducir la sobreoscilación si es necesario</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Variables de control PID
+        let kp = 1, ki = 0.5, kd = 0.1;
+        let integral = 0;
+        let prevError = 0;
+        const setpoint = 1;
+        let maxOvershoot = 0;
+        let startTime = Date.now();
+        let settlingTime = 0;
+        let isSettled = false;
+        
+        // Tema oscuro/claro
+        let isDarkTheme = true;
+        const themeToggle = document.getElementById('themeToggle');
+        
+        function toggleTheme() {
+            isDarkTheme = !isDarkTheme;
+            document.body.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
+            themeToggle.innerHTML = isDarkTheme ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
+            updateChartTheme();
+        }
+
+        themeToggle.addEventListener('click', toggleTheme);
+
+        // Configuración de Chart.js
+        const ctx = document.getElementById('pidChart').getContext('2d');
+        const data = {
+            labels: Array.from({ length: 100 }, (_, i) => i),
+            datasets: [{
+                label: 'Respuesta del Sistema',
+                data: Array(100).fill(0),
+                borderColor: '#4CAF50',
+                borderWidth: 2,
+                fill: false,
+            }, {
+                label: 'Setpoint',
+                data: Array(100).fill(setpoint),
+                borderColor: '#ffbb33',
+                borderWidth: 1,
+                borderDash: [5, 5],
+                fill: false,
+            }]
+        };
+
+        function updateChartTheme() {
+            pidChart.options.scales.x.grid.color = isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            pidChart.options.scales.y.grid.color = isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            pidChart.options.scales.x.ticks.color = isDarkTheme ? '#b3b3b3' : '#666666';
+            pidChart.options.scales.y.ticks.color = isDarkTheme ? '#b3b3b3' : '#666666';
+            pidChart.update();
+        }
+
+        const config = {
+            type: 'line',
+            data: data,
+            options: {
+                animation: false,
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: isDarkTheme ? '#b3b3b3' : '#666666'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        title: { 
+                            display: true, 
+                            text: 'Tiempo (s)',
+                            color: isDarkTheme ? '#b3b3b3' : '#666666'
+                        },
+                        grid: {
+                            color: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                        },
+                        ticks: {
+                            color: isDarkTheme ? '#b3b3b3' : '#666666'
+                        }
+                    },
+                    y: {
+                        display: true,
+                        title: { 
+                            display: true, 
+                            text: 'Valor',
+                            color: isDarkTheme ? '#b3b3b3' : '#666666'
+                        },
+                        grid: {
+                            color: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                        },
+                        ticks: {
+                            color: isDarkTheme ? '#b3b3b3' : '#666666'
+                        }
+                    }
+                }
+            }
+        };
+        const pidChart = new Chart(ctx, config);
+        updateChartTheme();
+
+        // Eventos de los controles
+        document.getElementById('kp').addEventListener('input', function() {
+            kp = parseFloat(this.value);
+            document.getElementById('kp-value').innerText = kp.toFixed(1);
+            resetSimulation();
+        });
+
+        document.getElementById('ki').addEventListener('input', function() {
+            ki = parseFloat(this.value);
+            document.getElementById('ki-value').innerText = ki.toFixed(1);
+            resetSimulation();
+        });
+
+        document.getElementById('kd').addEventListener('input', function() {
+            kd = parseFloat(this.value);
+            document.getElementById('kd-value').innerText = kd.toFixed(1);
+            resetSimulation();
+        });
+
+        // Función de control PID
+        function pidController(measuredValue) {
+            const error = setpoint - measuredValue;
+            integral += error;
+            const derivative = error - prevError;
+            const output = kp * error + ki * integral + kd * derivative;
+            prevError = error;
+            return output;
+        }
+
+        // Función para calcular métricas de rendimiento
+        function calculateMetrics(measuredValue) {
+            // Calcular sobreoscilación
+            if (measuredValue > setpoint && measuredValue > maxOvershoot) {
+                maxOvershoot = measuredValue;
+                const overshootPercent = ((maxOvershoot - setpoint) / setpoint) * 100;
+                document.getElementById('overshoot').innerText = overshootPercent.toFixed(2) + '%';
+            }
+
+            // Calcular tiempo de estabilización
+            const tolerance = 0.05; // 5% de tolerancia
+            const isWithinTolerance = Math.abs(measuredValue - setpoint) <= (setpoint * tolerance);
+            
+            if (isWithinTolerance && !isSettled) {
+                settlingTime = (Date.now() - startTime) / 1000;
+                document.getElementById('settlingTime').innerText = settlingTime.toFixed(2) + 's';
+                isSettled = true;
+            } else if (!isWithinTolerance) {
+                isSettled = false;
+            }
+
+            // Calcular error en estado estable
+            const steadyStateError = Math.abs((setpoint - measuredValue) / setpoint) * 100;
+            document.getElementById('steadyStateError').innerText = steadyStateError.toFixed(2) + '%';
+        }
+
+        // Función para resetear la simulación
+        function resetSimulation() {
+            integral = 0;
+            prevError = 0;
+            maxOvershoot = 0;
+            isSettled = false;
+            startTime = Date.now();
+            settlingTime = 0;
+            data.datasets[0].data = Array(100).fill(0);
+            pidChart.update();
+        }
+
+        // Simulación en tiempo real
+        let measuredValue = 0;
+        function updateChart() {
+            const output = pidController(measuredValue);
+            measuredValue += output * 0.05; // Factor de escala
+
+            // Actualizar datos del gráfico
+            data.datasets[0].data.push(measuredValue);
+            data.datasets[0].data.shift();
+            pidChart.update();
+
+            // Actualizar métricas
+            calculateMetrics(measuredValue);
+
+            requestAnimationFrame(updateChart);
+        }
+
+        // Funciones del modal
+        function openModal() {
+            document.getElementById('infoModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('infoModal').style.display = 'none';
+        }
+
+        // Cerrar modal al hacer clic fuera de él
+        window.onclick = function(event) {
+            const modal = document.getElementById('infoModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Iniciar simulación
+        updateChart();
+    </script>
+</body>
+</html>
